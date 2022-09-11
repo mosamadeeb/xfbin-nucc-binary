@@ -1,12 +1,14 @@
+mod message_info;
+mod player_color_param;
+
+use binary_stream::Endian as BinaryEndian;
 use deku::ctx::Endian;
 use downcast_rs::{impl_downcast, Downcast};
 use regex::Regex;
 use strum_macros::{Display, EnumIter, EnumString};
 
-use binary_stream::Endian as BinaryEndian;
 use message_info::MessageInfo;
-
-pub mod message_info;
+use player_color_param::PlayerColorParam;
 
 pub trait NuccBinaryParsed: Downcast {
     fn binary_type(&self) -> NuccBinaryType;
@@ -25,6 +27,9 @@ impl From<Box<dyn NuccBinaryParsed>> for Vec<u8> {
             NuccBinaryType::MessageInfo(_) => {
                 (*boxed.downcast::<MessageInfo>().ok().unwrap()).into()
             }
+            NuccBinaryType::PlayerColorParam(_) => {
+                (*boxed.downcast::<PlayerColorParam>().ok().unwrap()).into()
+            }
         }
     }
 }
@@ -37,6 +42,9 @@ impl From<NuccBinaryParsedConverter> for Box<dyn NuccBinaryParsed> {
 
         match binary_type {
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::deserialize(&data, use_json)),
+            NuccBinaryType::PlayerColorParam(_) => {
+                Box::new(PlayerColorParam::deserialize(&data, use_json))
+            }
         }
     }
 }
@@ -44,6 +52,7 @@ impl From<NuccBinaryParsedConverter> for Box<dyn NuccBinaryParsed> {
 #[derive(EnumIter, Display, EnumString)]
 pub enum NuccBinaryType {
     MessageInfo(Endian),
+    PlayerColorParam(Endian),
 }
 
 impl NuccBinaryType {
@@ -61,6 +70,12 @@ impl NuccBinaryType {
                     // ),
                 ]
             }
+            NuccBinaryType::PlayerColorParam(_) => {
+                vec![(
+                    Regex::new(r"(PlayerColorParam\.bin)$").unwrap(),
+                    Endian::Little,
+                )]
+            }
         }
     }
 
@@ -72,12 +87,16 @@ impl NuccBinaryType {
                     // String::from("PS3//eng//messageInfo.bin"),
                 ]
             }
+            NuccBinaryType::PlayerColorParam(_) => {
+                vec![String::from("PlayerColorParam.bin")]
+            }
         }
     }
 
     pub fn convert(&self, data: &[u8], endian: Endian) -> Box<dyn NuccBinaryParsed> {
         match self {
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
+            NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
         }
     }
 }
