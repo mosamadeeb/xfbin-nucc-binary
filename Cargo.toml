@@ -9,3 +9,28 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Used for reading/writing all serializable structs
+deku = "0.13.1"
+
+# More efficient alternative for std::collections::HashMap
+hashbrown = "0.12"
+
+# Used for reading strings with SHIFT-JIS (codepage 932)
+encoding_rs = "0.8.31"
+codepage = "0.1.1"
+
+# Used for converting enums (chunk types) to strings and vice-versa
+strum = "0.24"
+strum_macros = "0.24"
+
+# Used for storing chunks as dynamic trait objects
+downcast-rs = "1.2.0"
+
+# Used for matching nucc struct file paths
+regex = "1.6"
+
+# Used for serializing/deserializing into json
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+
+binary-stream = { path = "../binary-stream" }
