@@ -5,6 +5,7 @@ mod lua_file;
 mod message_info;
 mod player_color_param;
 mod png_file;
+mod prm_load;
 mod sound_test_param;
 mod xml_file;
 
@@ -27,6 +28,7 @@ pub use lua_file::LuaFile;
 pub use message_info::MessageInfo;
 pub use player_color_param::PlayerColorParam;
 pub use png_file::PngFile;
+pub use prm_load::PrmLoad;
 pub use sound_test_param::SoundTestParam;
 pub use xml_file::XmlFile;
 
@@ -69,6 +71,7 @@ impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
             NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
             NuccBinaryType::PNG => Box::new(PngFile::from(data)),
+            NuccBinaryType::PrmLoad(_) => Box::new(PrmLoad::read_parsed(data, endian)),
             NuccBinaryType::SoundTestParam(_) => Box::new(SoundTestParam::from((data, endian))),
             NuccBinaryType::XML => Box::new(XmlFile::from(data)),
         }
@@ -113,6 +116,9 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
                 (*boxed.downcast::<PlayerColorParam>().ok().unwrap()).into()
             }
             NuccBinaryType::PNG => (*boxed.downcast::<PngFile>().ok().unwrap()).into(),
+            NuccBinaryType::PrmLoad(_) => {
+                (*boxed.downcast::<PrmLoad>().ok().unwrap()).write_parsed()
+            }
             NuccBinaryType::SoundTestParam(_) => {
                 (*boxed.downcast::<SoundTestParam>().ok().unwrap()).into()
             }
@@ -137,6 +143,7 @@ impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
                 Box::new(PlayerColorParam::deserialize(&data, use_json))
             }
             NuccBinaryType::PNG => Box::new(PngFile::deserialize(&data, use_json)),
+            NuccBinaryType::PrmLoad(_) => Box::new(PrmLoad::deserialize(&data, use_json)),
             NuccBinaryType::SoundTestParam(_) => {
                 Box::new(SoundTestParam::deserialize(&data, use_json))
             }

@@ -1,4 +1,5 @@
 mod nucc_binary_parsed;
+mod utils;
 
 use deku::ctx::Endian;
 use regex::Regex;
@@ -16,6 +17,7 @@ pub enum NuccBinaryType {
     MessageInfo(Endian),
     PlayerColorParam(Endian),
     PNG,
+    PrmLoad(Endian),
     SoundTestParam(Endian),
     XML,
 }
@@ -56,6 +58,9 @@ impl NuccBinaryType {
             NuccBinaryType::PNG => {
                 vec![(Regex::new(r"(\.png)$").unwrap(), Endian::Little)]
             }
+            NuccBinaryType::PrmLoad(_) => {
+                vec![(Regex::new(r"(prm_load\.bin)$").unwrap(), Endian::Little)]
+            }
             NuccBinaryType::SoundTestParam(_) => {
                 vec![(
                     Regex::new(r"(SoundTestParam\.bin)$").unwrap(),
@@ -95,6 +100,11 @@ impl NuccBinaryType {
             }
             NuccBinaryType::PNG => {
                 vec![String::from("Z:/char/x/duel_item/tex/c_bat_067.png")]
+            }
+            NuccBinaryType::PrmLoad(_) => {
+                vec![String::from(
+                    "D:/JARP/trunk/param/player/Converter/bin/0bao01/0bao01prm_load.bin",
+                )]
             }
             NuccBinaryType::SoundTestParam(_) => {
                 vec![String::from("SoundTestParam.bin")]
