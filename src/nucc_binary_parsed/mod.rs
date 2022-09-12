@@ -1,6 +1,7 @@
 mod characode;
 mod dds_file;
 mod ev_file;
+mod fcv_file;
 mod lua_file;
 mod message_info;
 mod player_color_param;
@@ -24,6 +25,7 @@ use super::NuccBinaryType;
 pub use characode::CharaCode;
 pub use dds_file::DdsFile;
 pub use ev_file::{EvFile, Version as EvVersion};
+pub use fcv_file::FcvFile;
 pub use lua_file::LuaFile;
 pub use message_info::MessageInfo;
 pub use player_color_param::PlayerColorParam;
@@ -67,6 +69,7 @@ impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
                 .unwrap()
                 .1,
             ),
+            NuccBinaryType::FCV => Box::new(FcvFile::from(data)),
             NuccBinaryType::LUA => Box::new(LuaFile::from(data)),
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
             NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
@@ -108,6 +111,7 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
                 .unwrap();
                 output.into_vec()
             }
+            NuccBinaryType::FCV => (*boxed.downcast::<FcvFile>().ok().unwrap()).into(),
             NuccBinaryType::LUA => (*boxed.downcast::<LuaFile>().ok().unwrap()).into(),
             NuccBinaryType::MessageInfo(_) => {
                 (*boxed.downcast::<MessageInfo>().ok().unwrap()).into()
@@ -137,6 +141,7 @@ impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::CharaCode(_) => Box::new(CharaCode::deserialize(&data, use_json)),
             NuccBinaryType::DDS => Box::new(DdsFile::deserialize(&data, use_json)),
             NuccBinaryType::Ev(_) => Box::new(EvFile::deserialize(&data, use_json)),
+            NuccBinaryType::FCV => Box::new(FcvFile::deserialize(&data, use_json)),
             NuccBinaryType::LUA => Box::new(LuaFile::deserialize(&data, use_json)),
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::deserialize(&data, use_json)),
             NuccBinaryType::PlayerColorParam(_) => {

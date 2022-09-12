@@ -13,6 +13,7 @@ pub enum NuccBinaryType {
     CharaCode(Endian),
     DDS,
     Ev(Endian),
+    FCV,
     LUA,
     MessageInfo(Endian),
     PlayerColorParam(Endian),
@@ -33,6 +34,9 @@ impl NuccBinaryType {
             }
             NuccBinaryType::Ev(_) => {
                 vec![(Regex::new(r"(_ev\.bin)$").unwrap(), Endian::Little)]
+            }
+            NuccBinaryType::FCV => {
+                vec![(Regex::new(r"(\.fcv)$").unwrap(), Endian::Little)]
             }
             NuccBinaryType::LUA => {
                 vec![(Regex::new(r"(\.lua)$").unwrap(), Endian::Little)]
@@ -85,6 +89,11 @@ impl NuccBinaryType {
             }
             NuccBinaryType::Ev(_) => {
                 vec![String::from("player/1dio01_ev/1dio01_ev.bin")]
+            }
+            NuccBinaryType::FCV => {
+                vec![String::from(
+                    "J:/char/c/0bao01/anm/ghh1/fcv/0bao01ghh1_cut2_bright_rate.fcv",
+                )]
             }
             NuccBinaryType::LUA => {
                 vec![String::from("d01/d01_010.lua")]
