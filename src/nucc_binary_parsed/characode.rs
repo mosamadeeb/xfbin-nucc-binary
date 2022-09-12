@@ -1,8 +1,9 @@
 use super::endian_from_bool;
 use super::NuccBinaryParsed;
 use super::NuccBinaryType;
+use crate::utils::DekuFixedString;
 
-use deku::ctx::{Endian, Limit};
+use deku::ctx::Endian;
 use deku::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -16,11 +17,8 @@ use serde::{Deserialize, Serialize};
 pub struct Entry {
     pub index: u32,
 
-    #[deku(
-        reader = "Vec::<u8>::read(deku::rest, Limit::from(8)).map(|(r, s)| (r, String::from_utf8(s).unwrap().trim_end_matches(\'\0\').to_string()))",
-        writer = "(self.chara.clone() + &String::from(\"\0\").repeat(8 - chara.len())).as_bytes().write(deku::output, ())"
-    )]
-    pub chara: String,
+    #[deku(ctx = "8")]
+    pub chara: DekuFixedString,
 }
 
 #[derive(Default, Serialize, Deserialize)]
