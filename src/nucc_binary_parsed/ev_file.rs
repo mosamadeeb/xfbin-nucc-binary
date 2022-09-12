@@ -5,18 +5,34 @@ use deku::bitvec::{BitSlice, BitVec, Msb0};
 use deku::ctx::{Endian, Limit};
 use deku::prelude::*;
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumMessage;
+use strum_macros::{Display, EnumIter, EnumString};
+
+#[derive(Clone, Copy, EnumIter, Display, EnumString, EnumMessage, Serialize, Deserialize)]
+pub enum Version {
+    /// JoJo
+    Encrypted,
+    /// Storm
+    Unencrypted,
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Version::Encrypted
+    }
+}
 
 #[derive(Default, Serialize, Deserialize)]
 #[deku_derive(DekuRead, DekuWrite)]
 #[deku(
     endian = "endian",
-    ctx = "endian: deku::ctx::Endian",
-    ctx_default = "Endian::Little"
+    ctx = "endian: deku::ctx::Endian, version: Version",
+    ctx_default = "Endian::Little, Version::default()"
 )]
 pub struct Entry {
     #[deku(
-        reader = "Entry::decrypt(deku::rest)",
-        writer = "Entry::encrypt(deku::output, &self.sound_name)"
+        reader = "Entry::decrypt(deku::rest, version)",
+        writer = "Entry::encrypt(deku::output, version, &self.sound_name)"
     )]
     pub sound_name: String,
 
@@ -32,18 +48,18 @@ pub struct Entry {
     pub unk4: f32,
 
     #[deku(
-        reader = "Entry::decrypt(deku::rest)",
-        writer = "Entry::encrypt(deku::output, &self.xfbin_path)"
+        reader = "Entry::decrypt(deku::rest, version)",
+        writer = "Entry::encrypt(deku::output, version, &self.xfbin_path)"
     )]
     pub xfbin_path: String,
     #[deku(
-        reader = "Entry::decrypt(deku::rest)",
-        writer = "Entry::encrypt(deku::output, &self.anm_name)"
+        reader = "Entry::decrypt(deku::rest, version)",
+        writer = "Entry::encrypt(deku::output, version, &self.anm_name)"
     )]
     pub anm_name: String,
     #[deku(
-        reader = "Entry::decrypt(deku::rest)",
-        writer = "Entry::encrypt(deku::output, &self.target_bone)"
+        reader = "Entry::decrypt(deku::rest, version)",
+        writer = "Entry::encrypt(deku::output, version, &self.target_bone)"
     )]
     pub target_bone: String,
 
@@ -57,8 +73,8 @@ pub struct Entry {
     pub loop_int16: i16,
 
     #[deku(
-        reader = "Entry::decrypt(deku::rest)",
-        writer = "Entry::encrypt(deku::output, &self.anm_command)"
+        reader = "Entry::decrypt(deku::rest, version)",
+        writer = "Entry::encrypt(deku::output, version, &self.anm_command)"
     )]
     pub anm_command: String,
 }
@@ -95,20 +111,33 @@ impl Entry {
         result
     }
 
-    fn decrypt(input: &BitSlice<Msb0, u8>) -> Result<(&BitSlice<Msb0, u8>, String), DekuError> {
+    fn decrypt(
+        input: &BitSlice<Msb0, u8>,
+        version: Version,
+    ) -> Result<(&BitSlice<Msb0, u8>, String), DekuError> {
         let (rest, data) = Vec::<u8>::read(input, Limit::from(0x20)).unwrap();
 
-        let decrypted = Entry::xor(&data, true);
+        let decrypted = match version {
+            Version::Encrypted => Entry::xor(&data, true),
+            Version::Unencrypted => data,
+        };
         let string =
             String::from_utf8(decrypted.into_iter().take_while(|b| *b != 0).collect()).unwrap();
 
         Ok((rest, string))
     }
 
-    fn encrypt(output: &mut BitVec<Msb0, u8>, string: &str) -> Result<(), DekuError> {
+    fn encrypt(
+        output: &mut BitVec<Msb0, u8>,
+        version: Version,
+        string: &str,
+    ) -> Result<(), DekuError> {
         let string = string.to_string() + &String::from("\0").repeat(0x20 - string.len());
 
-        let encrypted = Entry::xor(string.as_bytes(), false);
+        let encrypted = match version {
+            Version::Encrypted => Entry::xor(string.as_bytes(), false),
+            Version::Unencrypted => string.as_bytes().to_vec(),
+        };
         encrypted.write(output, ())
     }
 }
@@ -117,19 +146,22 @@ impl Entry {
 #[deku_derive(DekuRead, DekuWrite)]
 #[deku(
     endian = "endian",
-    ctx = "endian: deku::ctx::Endian",
-    ctx_default = "Endian::Little"
+    ctx = "endian: deku::ctx::Endian, version: Version",
+    ctx_default = "Endian::Little, Version::default()"
 )]
 pub struct EvFile {
     #[serde(skip)]
     #[deku(update = "self.entries.len() as u16")]
     pub count: u16,
 
-    #[deku(count = "count")]
+    #[deku(count = "count", ctx = "version")]
     pub entries: Vec<Entry>,
 
     #[deku(skip, default = "endian == Endian::Big")]
     pub big_endian: bool,
+
+    #[deku(skip, default = "version")]
+    pub stored_version: Version,
 }
 
 impl NuccBinaryParsed for EvFile {

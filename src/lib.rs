@@ -1,12 +1,13 @@
 mod nucc_binary_parsed;
 
-use deku::{bitvec::BitView, ctx::Endian, DekuRead};
+use deku::ctx::Endian;
 use regex::Regex;
+use strum::{EnumMessage, IntoEnumIterator};
 use strum_macros::{Display, EnumIter, EnumString};
 
 pub use nucc_binary_parsed::*;
 
-#[derive(EnumIter, Display, EnumString)]
+#[derive(Copy, Clone, EnumIter, Display, EnumString)]
 pub enum NuccBinaryType {
     DDS,
     Ev(Endian),
@@ -85,15 +86,18 @@ impl NuccBinaryType {
         }
     }
 
-    pub fn convert(&self, data: &[u8], endian: Endian) -> Box<dyn NuccBinaryParsed> {
+    pub fn version_options(&self) -> Vec<String> {
         match self {
-            NuccBinaryType::DDS => Box::new(DdsFile::from(data)),
-            NuccBinaryType::Ev(_) => Box::new(EvFile::read(data.view_bits(), endian).unwrap().1),
-            NuccBinaryType::LUA => Box::new(LuaFile::from(data)),
-            NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
-            NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
-            NuccBinaryType::PNG => Box::new(PngFile::from(data)),
-            NuccBinaryType::XML => Box::new(XmlFile::from(data)),
+            NuccBinaryType::Ev(_) => EvVersion::iter()
+                .map(|version| {
+                    format!(
+                        "{} ({})",
+                        version,
+                        version.get_documentation().unwrap_or_default()
+                    )
+                })
+                .collect(),
+            _ => vec![],
         }
     }
 }

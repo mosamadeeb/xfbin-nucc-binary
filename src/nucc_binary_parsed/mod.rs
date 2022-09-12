@@ -7,13 +7,18 @@ mod png_file;
 mod xml_file;
 
 use binary_stream::Endian as BinaryEndian;
-use deku::{bitvec::BitVec, ctx::Endian, DekuUpdate, DekuWrite};
+use deku::{
+    bitvec::{BitVec, BitView},
+    ctx::Endian,
+    DekuRead, DekuUpdate, DekuWrite,
+};
 use downcast_rs::{impl_downcast, Downcast};
+use strum::IntoEnumIterator;
 
 use super::NuccBinaryType;
 
 pub use dds_file::DdsFile;
-pub use ev_file::EvFile;
+pub use ev_file::{EvFile, Version as EvVersion};
 pub use lua_file::LuaFile;
 pub use message_info::MessageInfo;
 pub use player_color_param::PlayerColorParam;
@@ -31,8 +36,42 @@ pub trait NuccBinaryParsed: Downcast {
 
 impl_downcast!(NuccBinaryParsed);
 
-impl From<Box<dyn NuccBinaryParsed>> for Vec<u8> {
-    fn from(boxed: Box<dyn NuccBinaryParsed>) -> Self {
+const UNEXPECTED_ENUM: &str = "Version index out of bounds";
+
+pub struct NuccBinaryParsedReader<'a>(pub NuccBinaryType, pub &'a [u8], pub Endian, pub usize);
+
+impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
+    fn from(reader: NuccBinaryParsedReader<'_>) -> Self {
+        let NuccBinaryParsedReader(binary_type, data, endian, version) = reader;
+
+        match binary_type {
+            NuccBinaryType::DDS => Box::new(DdsFile::from(data)),
+            NuccBinaryType::Ev(_) => Box::new(
+                EvFile::read(
+                    data.view_bits(),
+                    (
+                        endian,
+                        EvVersion::iter().nth(version).expect(UNEXPECTED_ENUM),
+                    ),
+                )
+                .unwrap()
+                .1,
+            ),
+            NuccBinaryType::LUA => Box::new(LuaFile::from(data)),
+            NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
+            NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
+            NuccBinaryType::PNG => Box::new(PngFile::from(data)),
+            NuccBinaryType::XML => Box::new(XmlFile::from(data)),
+        }
+    }
+}
+
+pub struct NuccBinaryParsedWriter(pub Box<dyn NuccBinaryParsed>, pub usize);
+
+impl From<NuccBinaryParsedWriter> for Vec<u8> {
+    fn from(writer: NuccBinaryParsedWriter) -> Self {
+        let NuccBinaryParsedWriter(boxed, _version) = writer;
+
         match boxed.binary_type() {
             NuccBinaryType::DDS => (*boxed.downcast::<DdsFile>().ok().unwrap()).into(),
             NuccBinaryType::Ev(_) => {
@@ -42,11 +81,14 @@ impl From<Box<dyn NuccBinaryParsed>> for Vec<u8> {
                 let mut output = BitVec::new();
                 ev.write(
                     &mut output,
-                    if ev.big_endian {
-                        Endian::Big
-                    } else {
-                        Endian::Little
-                    },
+                    (
+                        if ev.big_endian {
+                            Endian::Big
+                        } else {
+                            Endian::Little
+                        },
+                        ev.stored_version,
+                    ),
                 )
                 .unwrap();
                 output.into_vec()
@@ -64,11 +106,11 @@ impl From<Box<dyn NuccBinaryParsed>> for Vec<u8> {
     }
 }
 
-pub struct NuccBinaryParsedConverter(pub NuccBinaryType, pub bool, pub Vec<u8>);
+pub struct NuccBinaryParsedDeserializer(pub NuccBinaryType, pub bool, pub Vec<u8>);
 
-impl From<NuccBinaryParsedConverter> for Box<dyn NuccBinaryParsed> {
-    fn from(converter: NuccBinaryParsedConverter) -> Self {
-        let NuccBinaryParsedConverter(binary_type, use_json, data) = converter;
+impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
+    fn from(deserializer: NuccBinaryParsedDeserializer) -> Self {
+        let NuccBinaryParsedDeserializer(binary_type, use_json, data) = deserializer;
 
         match binary_type {
             NuccBinaryType::DDS => Box::new(DdsFile::deserialize(&data, use_json)),
@@ -81,6 +123,15 @@ impl From<NuccBinaryParsedConverter> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::PNG => Box::new(PngFile::deserialize(&data, use_json)),
             NuccBinaryType::XML => Box::new(XmlFile::deserialize(&data, use_json)),
         }
+    }
+}
+
+pub struct NuccBinaryParsedSerializer(pub Box<dyn NuccBinaryParsed>, pub bool);
+
+impl From<NuccBinaryParsedSerializer> for Vec<u8> {
+    fn from(serializer: NuccBinaryParsedSerializer) -> Self {
+        let NuccBinaryParsedSerializer(boxed, use_json) = serializer;
+        boxed.serialize(use_json)
     }
 }
 
