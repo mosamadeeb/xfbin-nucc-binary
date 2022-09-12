@@ -1,5 +1,3 @@
-use crate::binary_stream_endian;
-
 use super::NuccBinaryParsed;
 use super::NuccBinaryType;
 
@@ -136,7 +134,7 @@ impl From<MessageInfo> for Vec<u8> {
         };
 
         let mut stream = MemoryStream::new();
-        let mut writer = BinaryWriter::new(&mut stream, binary_stream_endian(endian));
+        let mut writer = BinaryWriter::new(&mut stream, super::binary_stream_endian(endian));
 
         writer.write_u32(parsed.unk0).unwrap();
         writer.write_u32(parsed.entries.len() as u32).unwrap();

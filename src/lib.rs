@@ -1,6 +1,5 @@
 mod nucc_binary_parsed;
 
-use binary_stream::Endian as BinaryEndian;
 use deku::{bitvec::BitView, ctx::Endian, DekuRead};
 use regex::Regex;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -96,12 +95,5 @@ impl NuccBinaryType {
             NuccBinaryType::PNG => Box::new(PngFile::from(data)),
             NuccBinaryType::XML => Box::new(XmlFile::from(data)),
         }
-    }
-}
-
-fn binary_stream_endian(endian: Endian) -> BinaryEndian {
-    match endian {
-        Endian::Little => BinaryEndian::Little,
-        Endian::Big => BinaryEndian::Big,
     }
 }
