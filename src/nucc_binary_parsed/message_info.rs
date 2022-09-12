@@ -1,3 +1,4 @@
+use super::endian_from_bool;
 use super::NuccBinaryParsed;
 use super::NuccBinaryType;
 
@@ -50,11 +51,7 @@ pub struct MessageInfo {
 
 impl NuccBinaryParsed for MessageInfo {
     fn binary_type(&self) -> NuccBinaryType {
-        NuccBinaryType::MessageInfo(if self.big_endian {
-            Endian::Big
-        } else {
-            Endian::Little
-        })
+        NuccBinaryType::MessageInfo(endian_from_bool(self.big_endian))
     }
 
     fn extension(&self, _: bool) -> String {

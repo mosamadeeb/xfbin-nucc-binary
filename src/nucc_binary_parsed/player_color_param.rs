@@ -1,3 +1,4 @@
+use super::endian_from_bool;
 use super::NuccBinaryParsed;
 use super::NuccBinaryType;
 
@@ -42,11 +43,7 @@ pub struct PlayerColorParam {
 
 impl NuccBinaryParsed for PlayerColorParam {
     fn binary_type(&self) -> NuccBinaryType {
-        NuccBinaryType::PlayerColorParam(if self.big_endian {
-            Endian::Big
-        } else {
-            Endian::Little
-        })
+        NuccBinaryType::PlayerColorParam(endian_from_bool(self.big_endian))
     }
 
     fn extension(&self, _: bool) -> String {

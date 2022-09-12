@@ -81,14 +81,7 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
                 let mut output = BitVec::new();
                 ev.write(
                     &mut output,
-                    (
-                        if ev.big_endian {
-                            Endian::Big
-                        } else {
-                            Endian::Little
-                        },
-                        ev.stored_version,
-                    ),
+                    (endian_from_bool(ev.big_endian), ev.stored_version),
                 )
                 .unwrap();
                 output.into_vec()
@@ -139,5 +132,13 @@ fn binary_stream_endian(endian: Endian) -> BinaryEndian {
     match endian {
         Endian::Little => BinaryEndian::Little,
         Endian::Big => BinaryEndian::Big,
+    }
+}
+
+fn endian_from_bool(is_big_endian: bool) -> Endian {
+    if is_big_endian {
+        Endian::Big
+    } else {
+        Endian::Little
     }
 }
