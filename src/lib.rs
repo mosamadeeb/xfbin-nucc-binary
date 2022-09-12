@@ -16,6 +16,7 @@ pub enum NuccBinaryType {
     MessageInfo(Endian),
     PlayerColorParam(Endian),
     PNG,
+    SoundTestParam(Endian),
     XML,
 }
 
@@ -55,6 +56,12 @@ impl NuccBinaryType {
             NuccBinaryType::PNG => {
                 vec![(Regex::new(r"(\.png)$").unwrap(), Endian::Little)]
             }
+            NuccBinaryType::SoundTestParam(_) => {
+                vec![(
+                    Regex::new(r"(SoundTestParam\.bin)$").unwrap(),
+                    Endian::Little,
+                )]
+            }
             NuccBinaryType::XML => {
                 vec![(Regex::new(r"(\.xml)$").unwrap(), Endian::Little)]
             }
@@ -88,6 +95,9 @@ impl NuccBinaryType {
             }
             NuccBinaryType::PNG => {
                 vec![String::from("Z:/char/x/duel_item/tex/c_bat_067.png")]
+            }
+            NuccBinaryType::SoundTestParam(_) => {
+                vec![String::from("SoundTestParam.bin")]
             }
             NuccBinaryType::XML => {
                 vec![String::from("D:/JARP/trunk/param/spm/spm/0bao01_SPM.xml")]

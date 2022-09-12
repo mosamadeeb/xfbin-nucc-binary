@@ -5,9 +5,11 @@ mod lua_file;
 mod message_info;
 mod player_color_param;
 mod png_file;
+mod sound_test_param;
 mod xml_file;
 
 use binary_stream::Endian as BinaryEndian;
+use crc::{Crc, CRC_32_BZIP2};
 use deku::{
     bitvec::{BitVec, BitView},
     ctx::Endian,
@@ -25,6 +27,7 @@ pub use lua_file::LuaFile;
 pub use message_info::MessageInfo;
 pub use player_color_param::PlayerColorParam;
 pub use png_file::PngFile;
+pub use sound_test_param::SoundTestParam;
 pub use xml_file::XmlFile;
 
 pub trait NuccBinaryParsed: Downcast {
@@ -66,6 +69,7 @@ impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::MessageInfo(_) => Box::new(MessageInfo::from((data, endian))),
             NuccBinaryType::PlayerColorParam(_) => Box::new(PlayerColorParam::from((data, endian))),
             NuccBinaryType::PNG => Box::new(PngFile::from(data)),
+            NuccBinaryType::SoundTestParam(_) => Box::new(SoundTestParam::from((data, endian))),
             NuccBinaryType::XML => Box::new(XmlFile::from(data)),
         }
     }
@@ -109,6 +113,9 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
                 (*boxed.downcast::<PlayerColorParam>().ok().unwrap()).into()
             }
             NuccBinaryType::PNG => (*boxed.downcast::<PngFile>().ok().unwrap()).into(),
+            NuccBinaryType::SoundTestParam(_) => {
+                (*boxed.downcast::<SoundTestParam>().ok().unwrap()).into()
+            }
             NuccBinaryType::XML => (*boxed.downcast::<XmlFile>().ok().unwrap()).into(),
         }
     }
@@ -130,6 +137,9 @@ impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
                 Box::new(PlayerColorParam::deserialize(&data, use_json))
             }
             NuccBinaryType::PNG => Box::new(PngFile::deserialize(&data, use_json)),
+            NuccBinaryType::SoundTestParam(_) => {
+                Box::new(SoundTestParam::deserialize(&data, use_json))
+            }
             NuccBinaryType::XML => Box::new(XmlFile::deserialize(&data, use_json)),
         }
     }
@@ -142,6 +152,14 @@ impl From<NuccBinaryParsedSerializer> for Vec<u8> {
         let NuccBinaryParsedSerializer(boxed, use_json) = serializer;
         boxed.serialize(use_json)
     }
+}
+
+const MSG_ID_HASH: Crc<u32> = Crc::<u32>::new(&CRC_32_BZIP2);
+
+fn calc_crc32(data: &[u8]) -> Vec<u8> {
+    let mut output = BitVec::new();
+    u32::write(&MSG_ID_HASH.checksum(data), &mut output, Endian::Little).unwrap();
+    output.into()
 }
 
 fn binary_stream_endian(endian: Endian) -> BinaryEndian {

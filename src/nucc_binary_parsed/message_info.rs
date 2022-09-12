@@ -19,7 +19,8 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Entry {
     #[deku(count = "4")]
-    pub unk0: Vec<u8>,
+    #[serde(with = "hex::serde")]
+    pub msg_id_crc32: Vec<u8>,
     pub unk1: u32,
     pub unk2: u32,
     pub unk3: u32,
@@ -31,7 +32,7 @@ pub struct Entry {
 
     pub unk6: i16,
     pub unk7: i16,
-    pub unk8: i16,
+    pub cue_id: i16,
     pub unk9: i16,
 
     pub unk10: u32,
