@@ -9,6 +9,7 @@ pub use nucc_binary_parsed::*;
 
 #[derive(Copy, Clone, EnumIter, Display, EnumString)]
 pub enum NuccBinaryType {
+    CharaCode(Endian),
     DDS,
     Ev(Endian),
     LUA,
@@ -21,6 +22,9 @@ pub enum NuccBinaryType {
 impl NuccBinaryType {
     pub fn patterns(&self) -> Vec<(Regex, Endian)> {
         match self {
+            NuccBinaryType::CharaCode(_) => {
+                vec![(Regex::new(r"(characode\.bin)$").unwrap(), Endian::Little)]
+            }
             NuccBinaryType::DDS => {
                 vec![(Regex::new(r"(\.dds)$").unwrap(), Endian::Little)]
             }
@@ -59,6 +63,11 @@ impl NuccBinaryType {
 
     pub fn examples(&self) -> Vec<String> {
         match self {
+            NuccBinaryType::CharaCode(_) => {
+                vec![String::from(
+                    "D:/JARP/param/player/Converter/bin/characode.bin",
+                )]
+            }
             NuccBinaryType::DDS => {
                 vec![String::from("Z:/STORM4_UI_DATA/charsel/charsel_I3.dds")]
             }

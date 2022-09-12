@@ -1,3 +1,4 @@
+mod characode;
 mod dds_file;
 mod ev_file;
 mod lua_file;
@@ -17,6 +18,7 @@ use strum::IntoEnumIterator;
 
 use super::NuccBinaryType;
 
+pub use characode::CharaCode;
 pub use dds_file::DdsFile;
 pub use ev_file::{EvFile, Version as EvVersion};
 pub use lua_file::LuaFile;
@@ -45,6 +47,9 @@ impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
         let NuccBinaryParsedReader(binary_type, data, endian, version) = reader;
 
         match binary_type {
+            NuccBinaryType::CharaCode(_) => {
+                Box::new(CharaCode::read(data.view_bits(), endian).unwrap().1)
+            }
             NuccBinaryType::DDS => Box::new(DdsFile::from(data)),
             NuccBinaryType::Ev(_) => Box::new(
                 EvFile::read(
@@ -73,6 +78,16 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
         let NuccBinaryParsedWriter(boxed, _version) = writer;
 
         match boxed.binary_type() {
+            NuccBinaryType::CharaCode(_) => {
+                let mut chara = *boxed.downcast::<CharaCode>().ok().unwrap();
+                chara.update().unwrap();
+
+                let mut output = BitVec::new();
+                chara
+                    .write(&mut output, endian_from_bool(chara.big_endian))
+                    .unwrap();
+                output.into_vec()
+            }
             NuccBinaryType::DDS => (*boxed.downcast::<DdsFile>().ok().unwrap()).into(),
             NuccBinaryType::Ev(_) => {
                 let mut ev = *boxed.downcast::<EvFile>().ok().unwrap();
@@ -106,6 +121,7 @@ impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
         let NuccBinaryParsedDeserializer(binary_type, use_json, data) = deserializer;
 
         match binary_type {
+            NuccBinaryType::CharaCode(_) => Box::new(CharaCode::deserialize(&data, use_json)),
             NuccBinaryType::DDS => Box::new(DdsFile::deserialize(&data, use_json)),
             NuccBinaryType::Ev(_) => Box::new(EvFile::deserialize(&data, use_json)),
             NuccBinaryType::LUA => Box::new(LuaFile::deserialize(&data, use_json)),
