@@ -2,10 +2,8 @@ use super::endian_from_bool;
 use super::NuccBinaryParsed;
 use super::NuccBinaryType;
 
-use binary_stream::SeekStream;
-use binary_stream::{BinaryReader, BinaryWriter, MemoryStream, SliceStream};
-use deku::bitvec::BitVec;
-use deku::bitvec::BitView;
+use binary_stream::{BinaryReader, BinaryWriter, MemoryStream, SeekStream, SliceStream};
+use deku::bitvec::{BitSlice, BitVec, BitView, Msb0};
 use deku::ctx::Endian;
 use deku::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -19,17 +17,48 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Entry {
     #[serde(skip)]
-    pub string_pointer: u32,
+    pub char_code_pointer: u64,
+    #[deku(skip)]
+    pub char_code: String,
 
-    pub unk0: u32,
     pub costume_index: u32,
 
-    pub red: u32,
-    pub green: u32,
-    pub blue: u32,
+    #[serde(with = "hex::serde")]
+    #[deku(
+        reader = "Entry::read_rgb(deku::rest, endian)",
+        writer = "Entry::write_rgb(&self.rgb, deku::output, endian)"
+    )]
+    pub rgb: Vec<u8>,
+}
 
-    #[deku(skip)]
-    pub string: String,
+impl Entry {
+    fn read_rgb(
+        rest: &BitSlice<Msb0, u8>,
+        endian: Endian,
+    ) -> Result<(&BitSlice<Msb0, u8>, Vec<u8>), DekuError> {
+        let mut data = rest;
+
+        let mut rgb = vec![];
+        for _ in 0..3 {
+            let (rest, value) = u32::read(data, endian)?;
+            rgb.push(value as u8);
+            data = rest;
+        }
+
+        Ok((data, rgb))
+    }
+
+    fn write_rgb(
+        rgb: &Vec<u8>,
+        output: &mut BitVec<Msb0, u8>,
+        endian: Endian,
+    ) -> Result<(), DekuError> {
+        for value in rgb.iter() {
+            u32::write(&(*value as u32), output, endian)?;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -92,15 +121,13 @@ impl From<(&[u8], Endian)> for PlayerColorParam {
         for (end_offset, entry) in entries
             .iter_mut()
             .enumerate()
-            .map(|(i, e)| ((0x18 * (entries_len - i)) as u32, e))
+            .map(|(i, e)| ((0x18 * (entries_len - i)) as u64, e))
         {
-            if entry.string_pointer != 0 {
-                reader
-                    .seek((entry.string_pointer - end_offset) as u64)
-                    .unwrap();
-                entry.string = reader.read_string_null_terminated().unwrap();
+            if entry.char_code_pointer != 0 {
+                reader.seek(entry.char_code_pointer - end_offset).unwrap();
+                entry.char_code = reader.read_string_null_terminated().unwrap();
             } else {
-                entry.string = String::from("");
+                entry.char_code = String::from("");
             }
         }
 
@@ -137,18 +164,18 @@ impl From<PlayerColorParam> for Vec<u8> {
             .entries
             .iter_mut()
             .enumerate()
-            .map(|(i, e)| (((0x18 * i) + 0x10) as u32, e))
+            .map(|(i, e)| (((0x18 * i) + 0x10) as u64, e))
         {
-            let pos = writer.tell().unwrap() as u32;
+            let pos = writer.tell().unwrap();
 
-            entry.string_pointer = 0;
-            if !entry.string.is_empty() {
+            entry.char_code_pointer = 0;
+            if !entry.char_code.is_empty() {
                 writer
-                    .write_string_null_terminated(entry.string.clone())
+                    .write_string_null_terminated(entry.char_code.clone())
                     .unwrap();
                 writer.align(4).unwrap();
 
-                entry.string_pointer = pos - pointer_offset;
+                entry.char_code_pointer = pos - pointer_offset;
             }
 
             let pos = writer.tell().unwrap();
