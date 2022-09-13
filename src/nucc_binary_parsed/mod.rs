@@ -8,6 +8,7 @@ mod player_color_param;
 mod png_file;
 mod prm_load;
 mod sound_test_param;
+mod stage_info;
 mod xml_file;
 
 use binary_stream::Endian as BinaryEndian;
@@ -32,6 +33,7 @@ pub use player_color_param::PlayerColorParam;
 pub use png_file::PngFile;
 pub use prm_load::PrmLoad;
 pub use sound_test_param::SoundTestParam;
+pub use stage_info::StageInfo;
 pub use xml_file::XmlFile;
 
 pub trait NuccBinaryParsed: Downcast {
@@ -76,6 +78,7 @@ impl From<NuccBinaryParsedReader<'_>> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::PNG => Box::new(PngFile::from(data)),
             NuccBinaryType::PrmLoad(_) => Box::new(PrmLoad::read_parsed(data, endian)),
             NuccBinaryType::SoundTestParam(_) => Box::new(SoundTestParam::from((data, endian))),
+            NuccBinaryType::StageInfo(_) => Box::new(StageInfo::from((data, endian))),
             NuccBinaryType::XML => Box::new(XmlFile::from(data)),
         }
     }
@@ -126,6 +129,7 @@ impl From<NuccBinaryParsedWriter> for Vec<u8> {
             NuccBinaryType::SoundTestParam(_) => {
                 (*boxed.downcast::<SoundTestParam>().ok().unwrap()).into()
             }
+            NuccBinaryType::StageInfo(_) => (*boxed.downcast::<StageInfo>().ok().unwrap()).into(),
             NuccBinaryType::XML => (*boxed.downcast::<XmlFile>().ok().unwrap()).into(),
         }
     }
@@ -152,6 +156,7 @@ impl From<NuccBinaryParsedDeserializer> for Box<dyn NuccBinaryParsed> {
             NuccBinaryType::SoundTestParam(_) => {
                 Box::new(SoundTestParam::deserialize(&data, use_json))
             }
+            NuccBinaryType::StageInfo(_) => Box::new(StageInfo::deserialize(&data, use_json)),
             NuccBinaryType::XML => Box::new(XmlFile::deserialize(&data, use_json)),
         }
     }

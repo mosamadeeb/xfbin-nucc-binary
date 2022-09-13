@@ -20,6 +20,7 @@ pub enum NuccBinaryType {
     PNG,
     PrmLoad(Endian),
     SoundTestParam(Endian),
+    StageInfo(Endian),
     XML,
 }
 
@@ -71,6 +72,9 @@ impl NuccBinaryType {
                     Endian::Little,
                 )]
             }
+            NuccBinaryType::StageInfo(_) => {
+                vec![(Regex::new(r"(stageInfo\.bin)$").unwrap(), Endian::Little)]
+            }
             NuccBinaryType::XML => {
                 vec![(Regex::new(r"(\.xml)$").unwrap(), Endian::Little)]
             }
@@ -117,6 +121,9 @@ impl NuccBinaryType {
             }
             NuccBinaryType::SoundTestParam(_) => {
                 vec![String::from("SoundTestParam.bin")]
+            }
+            NuccBinaryType::StageInfo(_) => {
+                vec![String::from("stageInfo.bin")]
             }
             NuccBinaryType::XML => {
                 vec![String::from("D:/JARP/trunk/param/spm/spm/0bao01_SPM.xml")]
